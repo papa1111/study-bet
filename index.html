@@ -135,6 +135,9 @@ h2{font-size:15px;margin:0}
 .tabs button[aria-selected="true"]{color:var(--ink);font-weight:700}
 .dot{position:absolute;top:4px;margin-left:2px;min-width:8px;height:8px;border-radius:99px;background:var(--omr)}
 .badge{position:absolute;top:0;margin-left:2px;min-width:18px;height:18px;border-radius:99px;background:var(--omr);color:#fff;font-size:11px;line-height:18px;padding:0 5px;font-weight:700}
+.modal{position:fixed;inset:0;background:rgba(10,14,20,.55);display:grid;place-items:center;padding:16px;z-index:40}
+.modal .card{width:100%;max-width:400px}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 </head>
@@ -244,6 +247,7 @@ h2{font-size:15px;margin:0}
         <h2>알림</h2>
         <p class="hint" id="pushState"></p>
         <button id="pushBtn" class="btn">알림 켜기</button>
+        <button id="guideAgain" class="btn sm">알림 켜는 법 다시 보기</button>
       </div>
       <div class="card stack">
         <h2>닉네임</h2>
@@ -290,6 +294,14 @@ h2{font-size:15px;margin:0}
     <button role="tab" data-t="tSet" aria-selected="false">설정</button>
   </div>
 </nav>
+<div id="guide" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+  <div class="card stack">
+    <h2 id="guideTitle">🔔 알림 켜기</h2>
+    <p class="hint">공부해, 응원, 멘션, 구라 신고, 23시 점검을 폰 알림으로 받아.</p>
+    <div id="guideBody" class="stack"></div>
+    <div class="row between"><button id="guideLater" class="btn sm">나중에</button><button id="guideGo" class="btn primary">알림 켜기</button></div>
+  </div>
+</div>
 <div id="toast" class="toast" hidden></div>
 
 <script type="module">
@@ -525,6 +537,7 @@ function enterGroup(code) {
 
   subscribeRange();
   initPush(false);
+  setTimeout(maybeGuide, 1500);
 }
 
 function subscribeRange() {
@@ -1134,8 +1147,9 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platfor
 const standalone = () => window.navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
 function renderPushState() {
   const s = $("pushState"), b = $("pushBtn");
+  $("guideAgain").hidden = !(vapidKey && workerUrl);
   if (!vapidKey || !workerUrl) { s.textContent = "알림 서버 설정이 아직 안 끝났어. 설정이 끝나면 여기서 켤 수 있어."; b.disabled = true; return; }
-  if (isIOS && !standalone()) { s.textContent = "아이폰은 Safari 공유 버튼 → '홈 화면에 추가' 한 다음, 홈 화면 아이콘으로 열어야 알림을 켤 수 있어."; b.disabled = true; return; }
+  if (isIOS && !standalone()) { s.textContent = "아이폰은 Safari나 Chrome의 공유 버튼 → '홈 화면에 추가' 한 다음, 홈 화면 아이콘으로 열어야 알림을 켤 수 있어."; b.disabled = true; return; }
   if (!("Notification" in window) || !("serviceWorker" in navigator)) { s.textContent = "이 브라우저는 알림을 지원하지 않아."; b.disabled = true; return; }
   b.disabled = false;
   if (Notification.permission === "granted" && lsGet(`sb_push_${me?.uid}`)) { s.textContent = "알림 켜짐 ✓ (공부해, 응원, 멘션, 구라 신고, 23시 점검)"; b.textContent = "알림 다시 연결"; }
@@ -1164,6 +1178,57 @@ async function initPush(ask) {
   renderPushState();
 }
 $("pushBtn").onclick = () => initPush(true);
+
+/* ---------- 알림 안내창 ---------- */
+const UA = navigator.userAgent;
+const inApp = /KAKAOTALK|Instagram|FBAN|FBAV|Line\/|NAVER\(inapp|everytimeApp|DaumApps|SamsungBrowser\/.*CrossApp/i.test(UA);
+const iosVer = (() => { const m = UA.match(/OS (\d+)_(\d+)/); return m ? [Number(m[1]), Number(m[2])] : null; })();
+const isCriOS = /CriOS/.test(UA);
+const guideKey = () => `sb_guide_${me?.uid}`;
+const pushOn = () => ("Notification" in window) && Notification.permission === "granted" && !!lsGet(`sb_push_${me?.uid}`);
+function guideState() { try { return JSON.parse(lsGet(guideKey()) || "{}"); } catch { return {}; } }
+function guideContent() {
+  const perm = ("Notification" in window) ? Notification.permission : "unsupported";
+  if (inApp) return { steps: ["화면 위나 아래의 ⋯ 메뉴를 눌러", "'다른 브라우저로 열기'를 골라 (아이폰은 Safari나 Chrome, 안드로이드는 Chrome)", "열린 브라우저에서 로그인하면 이 안내가 다시 떠"], note: "카톡 같은 앱 안의 브라우저에서는 알림을 켤 수 없어." };
+  if (isIOS) {
+    if (iosVer && (iosVer[0] < 16 || (iosVer[0] === 16 && iosVer[1] < 4))) return { note: `지금 iOS ${iosVer[0]}.${iosVer[1]}이라서 알림이 안 돼. 설정 → 일반 → 소프트웨어 업데이트에서 iOS 16.4 이상으로 올려줘.` };
+    if (!standalone()) return {
+      steps: isCriOS
+        ? ["주소창 오른쪽 공유 버튼(□↑)을 눌러", "'홈 화면에 추가'를 눌러", "홈 화면에 생긴 '공부내기' 아이콘으로 다시 열어"]
+        : ["화면 아래 공유 버튼(□↑)을 눌러", "메뉴를 내려서 '홈 화면에 추가'를 눌러", "홈 화면에 생긴 '공부내기' 아이콘으로 다시 열어"],
+      note: "아이폰은 홈 화면에 추가한 앱에서만 알림이 와. 홈 화면 앱에서 로그인을 한 번 더 해야 해."
+    };
+  }
+  if (perm === "denied") return { note: isIOS ? "알림이 차단돼 있어. 아이폰 설정 → 알림 → 공부내기 → 알림 허용을 켜줘." : "알림이 차단돼 있어. 주소창 왼쪽 아이콘(또는 ⋮ 메뉴) → 사이트 설정 → 알림 → 허용으로 바꾸고 새로고침해줘." };
+  if (perm === "unsupported" || !("serviceWorker" in navigator)) return { note: "이 브라우저는 알림을 지원하지 않아. 안드로이드는 Chrome, 아이폰은 Safari나 Chrome을 써줘." };
+  return { steps: ["아래 '알림 켜기'를 눌러", "뜨는 창에서 '허용'을 눌러"], btn: true };
+}
+function openGuide() {
+  const g = guideContent();
+  $("guideBody").innerHTML = `${g.note ? `<p class="sub">${esc(g.note)}</p>` : ""}${g.steps ? `<ol class="steps">${g.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ol>` : ""}`;
+  $("guideGo").hidden = !g.btn;
+  $("guide").hidden = false;
+}
+function maybeGuide() {
+  if (!vapidKey || !workerUrl || !me || pushOn()) return;
+  const st = guideState();
+  if (st.done || (st.count || 0) >= 2) return;
+  if (st.later && Date.now() - st.later < 3 * 864e5) return;
+  openGuide();
+}
+$("guideLater").onclick = () => {
+  const st = guideState();
+  lsSet(guideKey(), JSON.stringify({ later: Date.now(), count: (st.count || 0) + 1 }));
+  $("guide").hidden = true;
+};
+$("guideGo").onclick = async () => {
+  $("guideGo").disabled = true;
+  await initPush(true);
+  $("guideGo").disabled = false;
+  if (pushOn()) { lsSet(guideKey(), JSON.stringify({ done: true })); $("guide").hidden = true; }
+  else openGuide();
+};
+$("guideAgain").onclick = openGuide;
 async function notify(to, title, body, includeSelf = false) {
   if (!workerUrl || !auth.currentUser || !gid) return;
   try {
