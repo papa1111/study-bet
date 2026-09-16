@@ -4,23 +4,27 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>공부 내기판</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#18202E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 :root{
   --bg:#EEF1F5; --surface:#FFFFFF; --ink:#18202E; --muted:#5E6878; --line:#D5DBE4;
-  --omr:#D0344B; --omr-soft:#FBE7EA; --ok:#23845A; --ok-soft:#E3F3EB; --warn:#B7791F;
+  --omr:#D0344B; --omr-soft:#FBE7EA; --ok:#23845A; --ok-soft:#E3F3EB; --warn:#B7791F; --warn-soft:#FBF1DE;
   --shadow:0 1px 2px rgba(24,32,46,.06);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#11151C; --surface:#1A202A; --ink:#E7ECF3; --muted:#98A2B3; --line:#2B3340;
-    --omr:#F0647A; --omr-soft:#3A1F26; --ok:#4CC38A; --ok-soft:#173026; --warn:#E0A84A;
+    --omr:#F0647A; --omr-soft:#3A1F26; --ok:#4CC38A; --ok-soft:#173026; --warn:#E0A84A; --warn-soft:#3A2F1A;
   }
 }
 :root[data-theme="dark"]{
   --bg:#11151C; --surface:#1A202A; --ink:#E7ECF3; --muted:#98A2B3; --line:#2B3340;
-  --omr:#F0647A; --omr-soft:#3A1F26; --ok:#4CC38A; --ok-soft:#173026; --warn:#E0A84A;
+  --omr:#F0647A; --omr-soft:#3A1F26; --ok:#4CC38A; --ok-soft:#173026; --warn:#E0A84A; --warn-soft:#3A2F1A;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -39,9 +43,15 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--omr);outline-of
 .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700}
 .btn.sm{padding:4px 10px;font-size:13px}
 input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+input[type=checkbox]{width:auto}
+input:disabled{opacity:.6}
 .stack{display:flex;flex-direction:column;gap:12px}
 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.between{justify-content:space-between}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:50;max-width:calc(100% - 32px)}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.err{color:var(--omr);font-size:13px;margin:0}
+h2{font-size:15px;margin:0}
 
 /* auth */
 .auth{min-height:80vh;display:grid;place-items:center;padding-block:32px}
@@ -50,23 +60,24 @@ input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid v
 .brand em{font-style:normal;color:var(--omr)}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{flex:1;border:0;background:transparent;padding:8px}
+.seg.sm button{padding:3px 12px;font-size:13px}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-.hint{font-size:12px;color:var(--muted);margin:0}
-.err{color:var(--omr);font-size:13px;margin:0}
 
-/* header: 수험표 스타일 */
-.top{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-block:16px 12px;background:var(--surface);border:1.5px solid var(--ink);border-radius:6px;overflow:hidden}
-.top > div{padding:10px 14px}
+/* 수험표 헤더 */
+.top{display:grid;grid-template-columns:1fr 1fr;margin-block:16px 12px;background:var(--surface);border:1.5px solid var(--ink);border-radius:6px;overflow:hidden}
+.top > div{padding:10px 14px;min-width:0}
 .top > div + div{border-left:1.5px dashed var(--line)}
 .top .big{font-size:30px;line-height:1.1}
 .dday{color:var(--omr)}
+.gauge{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+.gauge i{display:block;height:100%;background:var(--ok);border-radius:3px}
+.gauge.team i{background:var(--ink)}
 
 /* timer */
 .timer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .clock{font-size:40px;font-weight:700;line-height:1}
 .state{font-size:13px;color:var(--muted)}
 .state.on{color:var(--ok)}
-.state.paused{color:var(--warn)}
 
 /* ranking */
 .rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
@@ -77,31 +88,33 @@ input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid v
 .name{font-weight:700}
 .bar{height:6px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--ink);border-radius:3px}
-.chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;margin-left:6px;vertical-align:2px;font-weight:500}
+.chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;margin-left:6px;vertical-align:2px;font-weight:500;white-space:nowrap}
 .chip.live{background:var(--ok-soft);color:var(--ok)}
-.chip.pause{background:var(--bg);color:var(--warn);border:1px solid var(--line)}
+.chip.soft{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
 .chip.last{background:var(--omr-soft);color:var(--omr)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
 .chip.void{background:var(--omr);color:#fff}
-.sessions{padding:0 0 12px 38px;display:flex;flex-direction:column;gap:8px}
-.sess{border:1px solid var(--line);border-radius:8px;padding:10px;font-size:14px}
+.chip.title{background:var(--ink);color:var(--bg)}
+.detail{padding:0 0 12px 38px;display:flex;flex-direction:column;gap:8px}
+.sess{border:1px solid var(--line);border-radius:8px;padding:10px;font-size:14px;display:flex;flex-direction:column;gap:6px}
 .sess.voided{border-color:var(--omr);background:var(--omr-soft)}
-.sess .meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.excuse{margin-top:6px;font-size:13px;color:var(--muted)}
-.excuse b{color:var(--ink)}
+.sub{font-size:13px;color:var(--muted)}
+.sub b{color:var(--ink)}
 
 /* money */
 .pot{text-align:center;padding-block:24px}
 .pot .big{font-size:52px;line-height:1}
-.fines{list-style:none;margin:0;padding:0}
-.fines li{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)}
-.fines li:first-child{border-top:0}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.list li:first-child{border-top:0}
 .log{font-size:13px;color:var(--muted)}
 
 /* chat */
 .chatlog{display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow-y:auto;padding:4px}
-.msg{max-width:80%;padding:6px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--line);align-self:flex-start}
+.msg{max-width:80%;padding:6px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--line);align-self:flex-start;overflow-wrap:anywhere}
 .msg.mine{align-self:flex-end;background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .msg.tagme{border:2px solid var(--omr)}
+.msg.sys{align-self:center;max-width:95%;background:transparent;border:1px dashed var(--line);color:var(--muted);font-size:13px;text-align:center}
 .msg small{display:block;font-size:11px;opacity:.7}
 .msg .at{color:var(--omr);font-weight:700}
 .msg.mine .at{color:#FF9AAA}
@@ -110,6 +123,10 @@ input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid v
 .pad button[aria-pressed="true"]{background:var(--omr);color:#fff;border-color:var(--omr)}
 .hours{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .hours button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 0;font-family:"JetBrains Mono",monospace}
+.days{display:flex;flex-wrap:wrap;gap:10px}
+.days label{display:flex;align-items:center;gap:4px}
+.form{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center}
+.form input{min-width:0}
 
 /* tabbar */
 .tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));z-index:20}
@@ -118,7 +135,6 @@ input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid v
 .tabs button[aria-selected="true"]{color:var(--ink);font-weight:700}
 .dot{position:absolute;top:4px;margin-left:2px;min-width:8px;height:8px;border-radius:99px;background:var(--omr)}
 .badge{position:absolute;top:0;margin-left:2px;min-width:18px;height:18px;border-radius:99px;background:var(--omr);color:#fff;font-size:11px;line-height:18px;padding:0 5px;font-weight:700}
-h2{font-size:15px;margin:0 0 8px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 </head>
@@ -146,7 +162,7 @@ h2{font-size:15px;margin:0 0 8px}
   <section id="vGroup" class="auth" hidden>
     <div class="card stack">
       <h1 class="brand display">그룹 코드</h1>
-      <p class="hint">친구가 만든 코드를 넣으면 참가, 없는 코드면 새 그룹을 만들어. 영문 소문자·숫자·하이픈 4~20자.</p>
+      <p class="hint">친구가 만든 코드를 넣으면 참가, 없는 코드면 새 그룹을 만들어(만든 사람이 방장). 영문 소문자·숫자·하이픈 4~20자.</p>
       <input id="inGroup" placeholder="예: gohak3-ban" autocapitalize="off">
       <p id="groupErr" class="err" hidden></p>
       <button id="groupGo" class="btn primary">들어가기</button>
@@ -158,21 +174,39 @@ h2{font-size:15px;margin:0 0 8px}
   <main id="vMain" hidden>
     <div class="top">
       <div><div class="label">수능까지</div><div class="big display dday" id="hDday">D-?</div></div>
-      <div><div class="label">모인 돈</div><div class="big display" id="hPot">0원</div></div>
+      <div>
+        <div class="label">모인 돈</div><div class="big display" id="hPot">0원</div>
+        <div id="hGoal" hidden><div class="gauge"><i id="hGoalBar"></i></div><div class="hint" id="hGoalTxt"></div></div>
+      </div>
     </div>
 
     <!-- 오늘 -->
     <section id="tToday" class="stack">
-      <div class="card timer">
-        <div>
-          <div class="label">내 오늘 공부</div>
-          <div class="clock mono" id="myClock">0:00:00</div>
-          <div class="state" id="myState">대기 중</div>
+      <div class="card stack" id="report" hidden></div>
+      <div class="card stack">
+        <div class="timer">
+          <div>
+            <div class="label">내 오늘 공부 <span id="myStreak"></span></div>
+            <div class="clock mono" id="myClock">0:00:00</div>
+            <div class="state" id="myState">대기 중</div>
+          </div>
+          <button id="timerBtn" class="btn ok">시작</button>
         </div>
-        <button id="timerBtn" class="btn ok">시작</button>
+        <div class="row between">
+          <span class="hint" id="dayNote"></span>
+          <button id="exemptBtn" class="btn sm">면제권 쓰기</button>
+        </div>
       </div>
-      <div class="card">
-        <div class="row" style="justify-content:space-between"><h2>오늘 순위</h2><span class="label" id="todayLbl"></span></div>
+      <div class="card stack" id="teamCard" hidden>
+        <div class="row between"><h2>그룹 주간 목표</h2><span class="mono" id="teamTxt"></span></div>
+        <div class="gauge team"><i id="teamBar"></i></div>
+        <p class="hint">다 같이 달성하면 이번 주 벌금 전부 면제.</p>
+      </div>
+      <div class="card stack">
+        <div class="row between">
+          <h2>순위</h2>
+          <div class="seg sm" role="group"><button id="rkDay" aria-pressed="true">오늘</button><button id="rkWeek" aria-pressed="false">이번 주</button></div>
+        </div>
         <p class="hint" id="voteHint"></p>
         <ul class="rank" id="rank"></ul>
       </div>
@@ -184,7 +218,7 @@ h2{font-size:15px;margin:0 0 8px}
       <div class="card stack">
         <div><div class="label">멘션</div><div class="pad" id="mentionPad"></div></div>
         <div id="hourBox" class="stack" hidden>
-          <div class="row" style="justify-content:space-between"><span class="label" id="hourLbl"></span><button class="btn sm" id="hourNone">시간 없이 보내기</button></div>
+          <div class="row between"><span class="label" id="hourLbl"></span><button class="btn sm" id="hourNone">시간 없이 보내기</button></div>
           <div class="hours" id="hours"></div>
         </div>
         <div><div class="label">질문</div><div class="pad" id="padQ"></div></div>
@@ -197,25 +231,52 @@ h2{font-size:15px;margin:0 0 8px}
       <div class="card pot">
         <div class="label">모인 돈</div>
         <div class="big display" id="potBig">0원</div>
+        <div id="potGoal" hidden style="max-width:280px;margin:12px auto 0"><div class="gauge"><i id="potGoalBar"></i></div><div class="hint" id="potGoalTxt"></div></div>
       </div>
-      <div class="card"><h2>사람별 적립</h2><ul class="fines" id="fines"></ul></div>
-      <div class="card"><h2>정산 기록</h2><div class="stack log" id="log"></div></div>
+      <div class="card stack"><h2>사람별 적립</h2><ul class="list" id="fines"></ul></div>
+      <div class="card stack"><h2>주간 정산</h2><div class="stack log" id="weekLog"></div></div>
+      <div class="card stack"><h2>일일 정산</h2><div class="stack log" id="log"></div></div>
     </section>
 
     <!-- 설정 -->
     <section id="tSet" class="stack" hidden>
       <div class="card stack">
+        <h2>알림</h2>
+        <p class="hint" id="pushState"></p>
+        <button id="pushBtn" class="btn">알림 켜기</button>
+      </div>
+      <div class="card stack">
+        <h2>닉네임</h2>
+        <div class="row"><input id="inNick" maxlength="10" style="flex:1;min-width:0"><button id="nickSave" class="btn">변경</button></div>
+        <p class="hint">최대 10자, 그룹 안에서 중복 불가, 하루 1번. 로그인 아이디: <b id="meName"></b></p>
+      </div>
+      <div class="card stack">
         <h2>수능 날짜 (그룹 공통)</h2>
         <div class="row"><input id="inDday" type="date" style="flex:1;min-width:0"><button id="ddaySave" class="btn">저장</button></div>
       </div>
-      <div class="card stack">
-        <h2>그룹</h2>
-        <div class="row" style="justify-content:space-between"><span>코드 <b class="mono" id="gCode"></b></span><button id="copyCode" class="btn sm">복사</button></div>
-        <div class="hint" id="gMembers"></div>
+      <div class="card stack" id="rulesCard">
+        <div class="row between"><h2>그룹 규칙</h2><span class="hint" id="rulesOwner"></span></div>
+        <div class="form">
+          <label for="inMin">최소 기준 (시간)</label><input id="inMin" type="number" min="0" max="12" step="0.5">
+          <label for="inGoalName">목표 이름</label><input id="inGoalName" maxlength="20" placeholder="예: 치킨">
+          <label for="inGoalAmt">목표 금액 (원)</label><input id="inGoalAmt" type="number" min="0" step="1000">
+          <label for="inTeam">주간 그룹 목표 (시간)</label><input id="inTeam" type="number" min="0" step="1" placeholder="0이면 끔">
+        </div>
+        <div><div class="label">휴식일 (정산 안 함)</div><div class="days" id="restDays"></div></div>
+        <button id="rulesSave" class="btn">규칙 저장</button>
       </div>
       <div class="card stack">
-        <div class="row" style="justify-content:space-between"><span>로그인: <b id="meName"></b></span><button id="logout" class="btn sm">로그아웃</button></div>
-        <p class="hint">탭을 벗어나거나 화면을 끄면 타이머가 자동으로 멈추고, 돌아오면 다시 흘러가.</p>
+        <div class="row between"><h2>멤버</h2><span>코드 <b class="mono" id="gCode"></b> <button id="copyCode" class="btn sm">복사</button></span></div>
+        <ul class="list" id="members"></ul>
+      </div>
+      <div class="card stack" id="backupCard" hidden>
+        <h2>백업</h2>
+        <p class="hint">공부 기록, 채팅, 정산 기록 전체를 JSON 파일로 내려받아.</p>
+        <button id="backupBtn" class="btn">백업 받기</button>
+      </div>
+      <div class="card row between">
+        <span class="hint">타이머는 앱을 나가도 계속 흘러가. 18시간이 지나면 자동 종료.</span>
+        <button id="logout" class="btn sm">로그아웃</button>
       </div>
     </section>
   </main>
@@ -239,28 +300,31 @@ function bootFail(title, detail) {
   for (const id of ["vAuth", "vGroup", "vMain", "tabs"]) document.getElementById(id).hidden = true;
   throw new Error(title);
 }
-let firebaseConfig;
-try { ({ firebaseConfig } = await import("./firebase-config.js")); }
+let cfg;
+try { cfg = await import("./firebase-config.js"); }
 catch (e) { bootFail("firebase-config.js를 못 읽었어. 파일이 같은 폴더에 있는지, 첫 줄이 export const firebaseConfig = { 인지 확인해.", e.message); }
+const firebaseConfig = cfg.firebaseConfig, vapidKey = cfg.vapidKey || "", workerUrl = cfg.workerUrl || "";
 if (!firebaseConfig || !firebaseConfig.apiKey || /붙여넣기/.test(JSON.stringify(firebaseConfig))) bootFail("firebase-config.js에 Firebase 키가 아직 안 들어갔어.", "");
+const V = "https://www.gstatic.com/firebasejs/10.12.2/";
 let initializeApp, getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut;
-let getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs, runTransaction, arrayUnion;
+let getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs, runTransaction, arrayUnion, arrayRemove;
 try {
-  const V = "https://www.gstatic.com/firebasejs/10.12.2/";
   ({ initializeApp } = await import(V + "firebase-app.js"));
   ({ getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } = await import(V + "firebase-auth.js"));
-  ({ getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs, runTransaction, arrayUnion } = await import(V + "firebase-firestore.js"));
+  ({ getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs, runTransaction, arrayUnion, arrayRemove } = await import(V + "firebase-firestore.js"));
 } catch (e) { bootFail("Firebase 라이브러리를 못 불러왔어. 인터넷 연결이나 광고 차단 확장을 확인해.", e.message); }
 let app, auth, db;
 try { app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app); }
 catch (e) { bootFail("Firebase 초기화 실패. firebase-config.js 값이 맞는지 확인해.", e.code || e.message); }
 window.addEventListener("unhandledrejection", e => { const c = e.reason?.code || ""; if (c) toast("오류: " + c); });
 
+/* ---------- 상수 ---------- */
 const DEFAULT_DDAY = "2026-11-19";
-const FINE = 500;
-const DAILY_REPORTS = 3;
+const FINE = 500, WEEK_FINE = 1000, DAILY_REPORTS = 3, EXEMPT_PER_MONTH = 2;
+const MAX_MS = 18 * 3600e3, NUDGE_COOLDOWN = 3600e3;
+const DEF = { minHours: 2, restDays: [], goalName: "", goalAmount: 0, teamWeekHours: 0 };
+const WD = ["일", "월", "화", "수", "목", "금", "토"];
 const EMAIL_DOMAIN = "@studybet.app";
-const TAB_ID = Math.random().toString(36).slice(2);
 
 /* ---------- 유틸 ---------- */
 const $ = id => document.getElementById(id);
@@ -269,43 +333,71 @@ const dayOf = ms => new Date(ms + KST).toISOString().slice(0, 10);
 const today = () => dayOf(Date.now());
 const addDays = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
 const midnightOf = d => Date.parse(d + "T00:00:00+09:00");
+const weekday = d => new Date(d + "T00:00:00Z").getUTCDay();
+const mondayOf = d => addDays(d, -((weekday(d) + 6) % 7));
+const kstHour = ms => new Date(ms + KST).getUTCHours();
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const won = n => (n || 0).toLocaleString("ko-KR") + "원";
 const hms = sec => { sec = Math.max(0, Math.floor(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60; return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`; };
-const hm = sec => { sec = Math.floor(sec); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h ? `${h}시간 ${m}분` : `${m}분`; };
+const hm = sec => { sec = Math.max(0, Math.floor(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h ? `${h}시간 ${m}분` : `${m}분`; };
 const clock = ms => new Date(ms + KST).toISOString().slice(11, 16);
+const md = d => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 let toastT;
-function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
-const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
-const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2800); }
+const mem = {};
+const lsGet = k => { try { const v = localStorage.getItem(k); return v ?? mem[k] ?? null; } catch { return mem[k] ?? null; } };
+const lsSet = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch {} };
 
-// 세션의 현재 초 (다른 사람 세션은 마지막 신호 +2분까지만 인정)
-function liveSec(s, now = Date.now()) {
-  let v = s.seconds || 0;
-  if (s.state === "running") {
-    const end = Math.min(now, (s.lastBeat || s.lastResume) + 120000);
-    v += Math.max(0, end - s.lastResume) / 1000;
-  }
-  return v;
+/* ---------- 세션 계산 ---------- */
+const capOf = s => s.capAt || (s.start + MAX_MS);
+const origStart = s => capOf(s) - MAX_MS;
+const isRunning = s => s.state === "running";
+const isLegacy = s => "tab" in s || "lastResume" in s;
+// 날짜 d(한국시간 하루) 안에 들어가는 공부 초
+function secsIn(s, d, now = Date.now()) {
+  if (s.voided) return 0;
+  if (!isRunning(s) || isLegacy(s)) return s.date === d ? (s.seconds || 0) : 0;
+  const a = midnightOf(d), b = midnightOf(addDays(d, 1));
+  const end = Math.min(now, capOf(s), b);
+  return Math.max(0, end - Math.max(s.start, a)) / 1000;
 }
+const sessLen = (s, now = Date.now()) => isRunning(s) && !isLegacy(s) ? Math.max(0, Math.min(now, capOf(s)) - s.start) / 1000 : (s.seconds || 0);
+const S = () => ({ ...DEF, ...(group?.settings || {}) });
+const eligibleOn = (g, d) => (g.members || []).filter(u => (g.joined?.[u] || "0") <= d);
+function dayTotals(d, list, now = Date.now(), g = group) {
+  const t = {};
+  for (const u of eligibleOn(g, d)) t[u] = 0;
+  for (const s of list) if (s.uid in t && (s.date === d || (isRunning(s) && s.date < d))) t[s.uid] += secsIn(s, d, now);
+  return t;
+}
+function weekTotals(now = Date.now()) {
+  const t = {};
+  for (const u of group.members) t[u] = 0;
+  for (let d = mondayOf(today()); d <= today(); d = addDays(d, 1)) {
+    const dt = dayTotals(d, sessions, now);
+    for (const u in dt) t[u] += dt[u];
+  }
+  return t;
+}
+const chargedOf = l => l.charged || Object.fromEntries((l.losers || []).map(u => [u, FINE]));
+const newSession = (date, start, capAt) => ({ uid: me.uid, date, start, capAt, end: null, seconds: 0, state: "running", votes: [], reportedBy: null, voided: false, excuse: null });
 
 /* ---------- 상태 ---------- */
-let me = null;          // {uid, username}
-let gid = null, group = null;
-let sessions = [];      // 오늘 세션 [{id, ...data}]
-let mySess = null;      // 내 진행 중 세션
-let chat = [];
-let subs = [];
-let sessSub = null, sessDate = null;
-let openRows = new Set();
-let pendingQ = null;
-let mentionSel = new Set();
-let cooldown = {};
-let busy = false;
-let settling = false;
+let me = null, gid = null, group = null;
+let sessions = [], edits = [], chat = [];
+let subs = [], rangeSub = null, rangeDay = null;
+let rankMode = "day";
+let openRows = new Set(), editOpen = new Set();
+let pendingQ = null, mentionSel = new Set(), cooldown = {};
+let busy = false, settling = false, nightlyTried = null, migrated = false;
+let rulesDirty = false, confirmKey = null, confirmT = null;
+const applying = new Set();
 
 const gref = () => doc(db, "groups", gid);
 const col = name => collection(db, "groups", gid, name);
+const nameOf = u => group?.names?.[u] || "?";
+const isOwner = () => group?.owner === me?.uid;
+const needVotes = n => Math.floor((n - 1) / 2) + 1;
 
 /* ---------- 화면 전환 ---------- */
 function show(v) { $("boot").hidden = true; for (const id of ["vAuth", "vGroup", "vMain"]) $(id).hidden = id !== v; $("tabs").hidden = v !== "vMain"; }
@@ -349,20 +441,19 @@ $("authGo").onclick = async () => {
 onAuthStateChanged(auth, async user => {
   cleanup();
   try {
-  if (!user) { me = null; show("vAuth"); return; }
-  const snap = await getDoc(doc(db, "users", user.uid));
-  const u = snap.exists() ? snap.data() : { username: (user.email || "").split("@")[0], groupId: null };
-  if (!snap.exists()) await setDoc(doc(db, "users", user.uid), u);
-  me = { uid: user.uid, username: u.username };
-  if (u.groupId) enterGroup(u.groupId); else show("vGroup");
+    if (!user) { me = null; show("vAuth"); return; }
+    const snap = await getDoc(doc(db, "users", user.uid));
+    const u = snap.exists() ? snap.data() : { username: (user.email || "").split("@")[0], groupId: null };
+    if (!snap.exists()) await setDoc(doc(db, "users", user.uid), u);
+    me = { uid: user.uid, username: u.username };
+    if (u.groupId) enterGroup(u.groupId); else show("vGroup");
   } catch (e) { bootFail("계정 정보를 못 불러왔어. Firestore DB와 규칙이 설정됐는지 확인해.", e.code || e.message); }
 });
 
-async function doLogout() { await pauseMine(); await signOut(auth); }
-$("logout").onclick = doLogout;
-$("groupOut").onclick = doLogout;
+$("logout").onclick = () => signOut(auth);
+$("groupOut").onclick = () => signOut(auth);
 
-/* ---------- 그룹 ---------- */
+/* ---------- 그룹 입장 ---------- */
 $("groupGo").onclick = async () => {
   const code = $("inGroup").value.trim().toLowerCase();
   const err = m => { $("groupErr").textContent = m; $("groupErr").hidden = false; };
@@ -373,11 +464,15 @@ $("groupGo").onclick = async () => {
     const g = await getDoc(r);
     if (!g.exists()) {
       await setDoc(r, {
-        members: [me.uid], names: { [me.uid]: me.username }, joined: { [me.uid]: today() },
-        dday: DEFAULT_DDAY, fines: {}, log: [], lastSettled: addDays(today(), -1), createdAt: Date.now()
+        members: [me.uid], owner: me.uid, names: { [me.uid]: me.username }, joined: { [me.uid]: today() },
+        dday: DEFAULT_DDAY, settings: { ...DEF }, fines: {}, log: [], weekLog: [], streak: {}, best: {}, stats: {}, exempt: {}, nickChanged: {},
+        lastSettled: addDays(today(), -1), lastWeekSettled: addDays(mondayOf(today()), -7), createdAt: Date.now()
       });
     } else if (!(g.data().members || []).includes(me.uid)) {
-      await updateDoc(r, { members: arrayUnion(me.uid), [`names.${me.uid}`]: me.username, [`joined.${me.uid}`]: today() });
+      const names = g.data().names || {};
+      let nick = me.username;
+      if (Object.values(names).some(n => n.toLowerCase() === nick)) nick = nick.slice(0, 7) + Math.floor(Math.random() * 90 + 10);
+      await updateDoc(r, { members: arrayUnion(me.uid), [`names.${me.uid}`]: nick.slice(0, 10), [`joined.${me.uid}`]: today() });
     }
     await updateDoc(doc(db, "users", me.uid), { groupId: code });
     enterGroup(code);
@@ -385,7 +480,11 @@ $("groupGo").onclick = async () => {
   finally { $("groupGo").disabled = false; }
 };
 
-function cleanup() { subs.forEach(u => u()); subs = []; if (sessSub) sessSub(); sessSub = null; sessDate = null; group = null; gid = null; sessions = []; mySess = null; chat = []; }
+function cleanup() {
+  subs.forEach(u => u()); subs = [];
+  if (rangeSub) rangeSub(); rangeSub = null; rangeDay = null;
+  group = null; gid = null; sessions = []; edits = []; chat = []; migrated = false;
+}
 
 function enterGroup(code) {
   gid = code;
@@ -393,201 +492,273 @@ function enterGroup(code) {
   let first = true;
   subs.push(onSnapshot(gref(), s => {
     group = s.data();
-    if (!group || !(group.members || []).includes(me.uid)) { cleanup(); show("vGroup"); return; }
-    renderHeader(); renderMoney(); renderSettings(); renderMentionPad(); renderRank();
+    if (!group || !(group.members || []).includes(me.uid)) { cleanup(); show("vGroup"); toast("그룹 멤버가 아니야"); return; }
+    if (!migrated) {
+      migrated = true;
+      if (!group.owner && group.members[0]) updateDoc(gref(), { owner: group.members[0] }).catch(() => {});
+      if (!group.lastWeekSettled) updateDoc(gref(), { lastWeekSettled: addDays(mondayOf(today()), -7) }).catch(() => {});
+    }
+    renderAll();
     if (first) { first = false; settle(); }
   }, e => toast("그룹 불러오기 실패: " + e.code)));
 
-  // 내 진행 중 세션 (날짜 무관)
-  let checkedStale = false;
-  subs.push(onSnapshot(query(col("sessions"), where("uid", "==", me.uid), where("active", "==", true)), snap => {
-    const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.start - a.start);
-    if (!checkedStale) {
-      checkedStale = true;
-      // 닫힌 탭에 남아있던 세션 정리
-      for (const s of list) if (Date.now() - (s.lastBeat || s.lastResume || 0) > 180000) finalize(s, s.lastBeat || s.lastResume);
-      mySess = list.find(s => Date.now() - (s.lastBeat || s.lastResume || 0) <= 180000) || null;
-      // 방금 닫았다가 다시 연 경우: 이 탭이 이어받아서 재개
-      if (mySess && mySess.state === "paused" && mySess.auto && mySess.date === today() && !document.hidden) {
-        const now = Date.now();
-        updateDoc(doc(col("sessions"), mySess.id), { tab: TAB_ID, state: "running", auto: false, lastResume: now, lastBeat: now }).catch(() => {});
-      }
-    } else mySess = list[0] || null;
-    renderTimer();
+  subs.push(onSnapshot(query(col("edits"), where("status", "in", ["open", "approved"])), snap => {
+    edits = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    for (const ed of edits) if (ed.uid === me.uid && ed.status === "approved" && !applying.has(ed.id)) applyEdit(ed);
+    renderRank();
   }));
 
-  // 채팅
   subs.push(onSnapshot(query(col("chat"), orderBy("ts", "desc"), limit(100)), snap => {
     chat = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
     renderChat();
   }));
 
-  subscribeToday();
+  const loadedAt = Date.now();
+  subs.push(onSnapshot(query(col("pokes"), where("to", "==", me.uid)), snap => {
+    for (const ch of snap.docChanges()) {
+      if (ch.type !== "added") continue;
+      const p = ch.doc.data();
+      if (p.ts > loadedAt - 600000) toast(p.type === "cheer" ? `👏 ${nameOf(p.from)}가 응원했어` : `📚 ${nameOf(p.from)}: 공부해!`);
+      deleteDoc(ch.doc.ref).catch(() => {});
+    }
+  }));
+
+  subscribeRange();
+  initPush(false);
 }
 
-function subscribeToday() {
-  if (sessSub) sessSub();
-  sessDate = today();
-  sessSub = onSnapshot(query(col("sessions"), where("date", "==", sessDate)), snap => {
+function subscribeRange() {
+  if (rangeSub) rangeSub();
+  rangeDay = today();
+  const from = addDays(mondayOf(rangeDay), -1);
+  rangeSub = onSnapshot(query(col("sessions"), where("date", ">=", from)), snap => {
     sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderRank();
+    renderRank(); renderTimer();
   });
 }
 
+function renderAll() { renderHeader(); renderTimer(); renderTeam(); renderReport(); renderRank(); renderMoney(); renderSettings(); renderMentionPad(); updateDot(); }
+
 /* ---------- 타이머 ---------- */
-async function finalize(s, endMs) {
-  const add = s.state === "running" ? Math.max(0, endMs - s.lastResume) / 1000 : 0;
-  await updateDoc(doc(col("sessions"), s.id), { state: "done", active: false, seconds: Math.round((s.seconds || 0) + add), end: endMs });
-}
+const mySess = () => sessions.filter(s => s.uid === me?.uid && isRunning(s) && !isLegacy(s)).sort((a, b) => b.start - a.start)[0] || null;
 
 $("timerBtn").onclick = async () => {
   if (busy) return; busy = true;
   try {
-    if (!mySess) {
-      const now = Date.now();
-      await addDoc(col("sessions"), { uid: me.uid, date: today(), start: now, end: null, seconds: 0, state: "running", active: true, lastResume: now, lastBeat: now, tab: TAB_ID, auto: false, votes: [], reportedBy: null, voided: false, excuse: null });
+    const s = mySess(), now = Date.now();
+    if (!s) {
+      await addDoc(col("sessions"), newSession(today(), now, now + MAX_MS));
     } else {
-      await finalize(mySess, Date.now());
-      toast("기록 저장됨");
+      const end = Math.min(now, capOf(s));
+      await updateDoc(doc(col("sessions"), s.id), { state: "done", end, seconds: Math.round((end - s.start) / 1000) });
+      toast("기록 저장됨 · " + hm(sessLen({ ...s, state: "done", seconds: (end - s.start) / 1000 })));
     }
   } catch (e) { toast("실패: " + e.code); }
   finally { busy = false; }
 };
 
-async function pauseMine() {
-  const s = mySess;
-  if (!s || s.state !== "running" || s.tab !== TAB_ID) return;
-  const now = Date.now();
-  s.state = "paused";
-  try { await updateDoc(doc(col("sessions"), s.id), { state: "paused", auto: true, seconds: Math.round((s.seconds || 0) + (now - s.lastResume) / 1000), lastBeat: now }); } catch {}
+// 18시간 자동 종료, 자정 넘긴 세션 분할, 옛 버전 세션 정리
+async function maintainMine(now) {
+  if (busy || !me) return;
+  const mine = sessions.filter(s => s.uid === me.uid && (isRunning(s) || s.state === "paused"));
+  if (!mine.length) return;
+  busy = true;
+  try {
+    for (const s of mine) {
+      const ref = doc(col("sessions"), s.id);
+      if (isLegacy(s)) {
+        const add = s.state === "running" ? Math.max(0, (s.lastBeat || s.lastResume) - s.lastResume) / 1000 : 0;
+        await updateDoc(ref, { state: "done", active: false, end: s.lastBeat || s.lastResume || now, seconds: Math.round((s.seconds || 0) + add) });
+        continue;
+      }
+      const cap = capOf(s), nextMid = midnightOf(addDays(s.date, 1));
+      if (now >= cap && cap <= nextMid) {
+        await updateDoc(ref, { state: "done", end: cap, seconds: Math.round((cap - s.start) / 1000) });
+        toast("18시간이 지나서 타이머가 자동 종료됐어");
+      } else if (now >= nextMid) {
+        await updateDoc(ref, { state: "done", end: nextMid, seconds: Math.round((nextMid - s.start) / 1000) });
+        await setDoc(doc(col("sessions"), s.id + "n"), newSession(addDays(s.date, 1), nextMid, cap));
+      }
+    }
+  } catch (e) { console.warn("maintain", e); }
+  finally { busy = false; }
 }
-async function resumeMine() {
-  const s = mySess;
-  if (!s || s.state !== "paused" || !s.auto || s.tab !== TAB_ID) return;
-  if (s.date !== today()) { await finalize(s, Date.now()); return; }
-  const now = Date.now();
-  try { await updateDoc(doc(col("sessions"), s.id), { state: "running", auto: false, lastResume: now, lastBeat: now }); } catch {}
-}
-document.addEventListener("visibilitychange", () => { document.hidden ? pauseMine() : resumeMine(); });
-window.addEventListener("pagehide", pauseMine);
 
 function renderTimer() {
-  const mine = sessions.filter(s => s.uid === me?.uid && !s.voided);
-  let total = mine.filter(s => !mySess || s.id !== mySess.id).reduce((a, s) => a + liveSec(s), 0);
-  if (mySess && mySess.date === today() && !mySess.voided) total += liveSec({ ...mySess, lastBeat: Date.now() });
-  $("myClock").textContent = hms(total);
-  const st = $("myState"), b = $("timerBtn");
-  if (!mySess) { st.textContent = "대기 중"; st.className = "state"; b.textContent = "시작"; b.className = "btn ok"; }
-  else if (mySess.state === "running") { st.textContent = "공부 중 · " + clock(mySess.start) + " 시작"; st.className = "state on"; b.textContent = "종료"; b.className = "btn primary"; }
-  else { st.textContent = mySess.tab === TAB_ID ? "탭을 벗어나서 일시정지됨" : "다른 기기에서 일시정지됨"; st.className = "state paused"; b.textContent = "종료"; b.className = "btn primary"; }
+  if (!group || !me) return;
+  const now = Date.now(), d = today(), st = S();
+  const t = dayTotals(d, sessions, now)[me.uid] || 0;
+  $("myClock").textContent = hms(t);
+  const s = mySess(), el = $("myState"), b = $("timerBtn");
+  if (s) {
+    const el2 = (now - origStart(s)) / 1000;
+    el.textContent = `공부 중 · ${clock(origStart(s))} 시작 · ${hm(el2)}째`; el.className = "state on";
+    b.textContent = "종료"; b.className = "btn primary";
+  } else { el.textContent = "대기 중"; el.className = "state"; b.textContent = "시작"; b.className = "btn ok"; }
+  const streak = group.streak?.[me.uid] || 0;
+  $("myStreak").textContent = streak ? `· 🔥${streak}일 연속` : "";
+  const rest = st.restDays.includes(weekday(d));
+  const used = (group.exempt?.[me.uid] || []).filter(x => x.slice(0, 7) === d.slice(0, 7));
+  const exToday = used.includes(d);
+  const notes = [];
+  if (rest) notes.push(`오늘은 휴식일(${WD[weekday(d)]}) · 정산 없음`);
+  else if (exToday) notes.push("오늘 면제권 사용함 · 일일 정산 제외");
+  else if (st.minHours > 0) notes.push(`최소 기준 ${st.minHours}시간 · ${t >= st.minHours * 3600 ? "달성 ✓" : hm(st.minHours * 3600 - t) + " 남음"}`);
+  $("dayNote").textContent = notes.join(" · ");
+  const eb = $("exemptBtn");
+  eb.textContent = confirmKey === "exempt" ? "한 번 더 누르면 사용" : `면제권 쓰기 (이번 달 ${used.length}/${EXEMPT_PER_MONTH})`;
+  eb.disabled = rest || exToday || used.length >= EXEMPT_PER_MONTH;
 }
 
-let beatAt = 0;
+function armConfirm(key) {
+  if (confirmKey === key) { confirmKey = null; clearTimeout(confirmT); return true; }
+  confirmKey = key; clearTimeout(confirmT);
+  confirmT = setTimeout(() => { confirmKey = null; renderTimer(); renderMembers(); }, 3000);
+  return false;
+}
+$("exemptBtn").onclick = async () => {
+  if (!armConfirm("exempt")) { renderTimer(); return; }
+  try { await updateDoc(gref(), { [`exempt.${me.uid}`]: arrayUnion(today()) }); toast("오늘 면제권 사용"); sendMsg(`🎫 ${nameOf(me.uid)} 오늘 면제권 사용`, [], null, true); }
+  catch (e) { toast("실패: " + e.code); }
+};
+
 setInterval(async () => {
   if (!me || !gid || !group) return;
   const now = Date.now();
-  // 날짜 바뀜
-  if (sessDate && sessDate !== today()) { subscribeToday(); settle(); }
-  // 자정 넘긴 내 세션 분할
-  if (mySess && mySess.state === "running" && mySess.tab === TAB_ID && mySess.date !== today() && !busy) {
-    busy = true;
-    try {
-      const mid = midnightOf(today()), old = mySess;
-      await finalize(old, mid);
-      await addDoc(col("sessions"), { uid: me.uid, date: today(), start: mid, end: null, seconds: 0, state: "running", active: true, lastResume: mid, lastBeat: now, tab: TAB_ID, auto: false, votes: [], reportedBy: null, voided: false, excuse: null });
-    } catch {} finally { busy = false; }
-  }
-  // 신호 (1분마다)
-  if (mySess && mySess.state === "running" && mySess.tab === TAB_ID && !document.hidden && now - beatAt > 60000) {
-    beatAt = now;
-    updateDoc(doc(col("sessions"), mySess.id), { lastBeat: now }).catch(() => {});
-  }
-  // 다른 기기 탭이 죽었으면 정리
-  if (mySess && mySess.tab !== TAB_ID && mySess.state === "running" && now - (mySess.lastBeat || 0) > 180000 && !busy) {
-    busy = true; finalize(mySess, mySess.lastBeat).finally(() => busy = false);
-  }
-  renderTimer(); updateRankTimes(); renderHeader();
+  if (rangeDay !== today()) { subscribeRange(); settle(); }
+  await maintainMine(now);
+  renderTimer(); updateLive(now); renderHeader(); renderTeam();
+  maybeNightly(now); maybeBest(now);
 }, 1000);
 
-/* ---------- 순위 & 구라 투표 ---------- */
-function totals() {
-  const t = {};
-  const d = today();
-  for (const u of group.members) if ((group.joined?.[u] || "0") <= d) t[u] = 0;
-  for (const s of sessions) if (!s.voided && s.uid in t) t[s.uid] += s.uid === me.uid && mySess && s.id === mySess.id ? liveSec({ ...s, ...mySess, lastBeat: Date.now() }) : liveSec(s);
-  return t;
+/* ---------- 순위 ---------- */
+function titlesOf(u) {
+  const out = [], st = group.stats?.[u] || {};
+  if ((st.early || 0) >= 5) out.push("새벽형 인간");
+  if ((st.voided || 0) >= 3) out.push("구라왕");
+  const logs = (group.log || []).filter(l => !l.rest && l.totals && u in l.totals).slice(0, 14);
+  if (logs.length >= 7 && logs.every(l => !chargedOf(l)[u])) out.push("철벽");
+  const f = group.fines || {}, mx = Math.max(0, ...Object.values(f));
+  if (mx > 0 && f[u] === mx && Object.values(f).filter(v => v === mx).length === 1) out.push("벌금왕");
+  if (group.weekLog?.[0]?.top === u) out.push("지난주 1등");
+  return out;
 }
-const nameOf = u => group?.names?.[u] || "?";
-const myReportsToday = () => sessions.filter(s => s.reportedBy === me.uid).length;
+function rankTotals(now) { return rankMode === "day" ? dayTotals(today(), sessions, now) : weekTotals(now); }
 
 function renderRank() {
   if (!group || !me) return;
-  const t = totals();
+  // 입력 중인 값 보존
+  const keep = {}; let focusId = document.activeElement?.id;
+  document.querySelectorAll("#rank input").forEach(i => keep[i.id] = i.value);
+  const now = Date.now(), d = today(), st = S(), n = group.members.length;
+  const t = rankTotals(now);
+  const ex = group.exempt || {};
+  const exToday = u => (ex[u] || []).includes(d);
+  const rest = st.restDays.includes(weekday(d));
   const order = Object.keys(t).sort((a, b) => t[b] - t[a]);
   const max = Math.max(1, ...Object.values(t));
-  const min = Math.min(...Object.values(t));
-  const n = group.members.length;
-  $("todayLbl").textContent = today().slice(5).replace("-", "월 ") + "일";
+  const cands = Object.keys(t).filter(u => !exToday(u));
+  const minV = cands.length ? Math.min(...cands.map(u => t[u])) : 0;
+  const myReports = sessions.filter(s => s.reportedBy === me.uid && s.date === d).length;
   $("voteHint").textContent = n < 3
-    ? "구라 신고는 3명 이상일 때 켜져."
-    : `구라 신고: 이름을 눌러 세션 확인 · 나 빼고 ${Math.floor((n - 1) / 2) + 1}명 동의하면 시간 삭제 · 오늘 내 신고 ${myReportsToday()}/${DAILY_REPORTS}`;
+    ? "구라 신고는 3명 이상일 때 켜져. 이름을 누르면 기록·응원·수정 요청."
+    : `이름을 누르면 기록 확인 · 구라 신고는 나 빼고 ${needVotes(n)}명 동의 시 시간 삭제 · 오늘 내 신고 ${myReports}/${DAILY_REPORTS}`;
   $("rank").innerHTML = order.map((u, i) => {
-    const mine = sessions.filter(s => s.uid === u).sort((a, b) => a.start - b.start);
-    const live = mine.find(s => s.state === "running" && Date.now() - (s.lastBeat || 0) < 120000);
-    const paused = !live && mine.find(s => s.state === "paused");
-    const isLast = order.length >= 2 && t[u] === min;
+    const running = sessions.find(s => s.uid === u && isRunning(s) && !isLegacy(s));
+    const chips = [];
+    if (u === me.uid) chips.push('<span class="chip soft">나</span>');
+    const streak = group.streak?.[u] || 0;
+    if (streak) chips.push(`<span class="chip soft">🔥${streak}</span>`);
+    for (const tt of titlesOf(u)) chips.push(`<span class="chip title">${esc(tt)}</span>`);
+    if (running) chips.push(`<span class="chip live" data-live="${esc(running.id)}">공부 중 ${hm((now - origStart(running)) / 1000)}째</span>`);
+    if (rankMode === "day") {
+      if (exToday(u)) chips.push('<span class="chip soft">면제</span>');
+      else if (!rest) {
+        if (cands.length >= 2 && t[u] === minV) chips.push('<span class="chip last">꼴찌 위기</span>');
+        if (st.minHours > 0 && t[u] < st.minHours * 3600) chips.push('<span class="chip warn">기준 미달</span>');
+      }
+    }
     const open = openRows.has(u);
     return `<li>
       <button class="who" data-row="${esc(u)}" aria-expanded="${open}">
         <span class="pos">${i + 1}</span>
-        <span><span class="name">${esc(nameOf(u))}</span>${u === me.uid ? '<span class="chip pause">나</span>' : ""}${live ? '<span class="chip live">공부 중</span>' : paused ? '<span class="chip pause">일시정지</span>' : ""}${isLast ? '<span class="chip last">꼴찌 위기</span>' : ""}
+        <span><span class="name">${esc(nameOf(u))}</span>${chips.join("")}
           <div class="bar"><i data-bar="${esc(u)}" style="width:${t[u] / max * 100}%"></i></div></span>
         <span class="mono" data-time="${esc(u)}">${hms(t[u])}</span>
       </button>
-      ${open ? `<div class="sessions">${mine.length ? mine.map(s => sessHtml(s)).join("") : '<div class="hint">오늘 기록 없음</div>'}</div>` : ""}
+      ${open ? detailHtml(u, running) : ""}
     </li>`;
   }).join("");
-  renderTimer();
+  for (const id in keep) { const el = $(id); if (el) el.value = keep[id]; }
+  if (focusId && $(focusId) && $("rank").contains($(focusId))) $(focusId).focus();
+}
+
+function detailHtml(u, running) {
+  const d = today(), mon = mondayOf(d);
+  const list = sessions.filter(s => s.uid === u && (rankMode === "day" ? (s.date === d || (isRunning(s) && s.date < d)) : s.date >= mon))
+    .sort((a, b) => b.start - a.start);
+  let pokes = "";
+  if (u !== me.uid) pokes = `<div class="row">${running ? `<button class="btn sm" data-poke="cheer" data-u="${esc(u)}">👏 응원</button>` : ""}<button class="btn sm" data-poke="nudge" data-u="${esc(u)}">📚 공부해</button></div>`;
+  return `<div class="detail">${pokes}${list.length ? list.map(sessHtml).join("") : '<div class="hint">기록 없음</div>'}</div>`;
 }
 
 function sessHtml(s) {
-  const n = group.members.length, need = Math.floor((n - 1) / 2) + 1;
-  const votes = s.votes || [];
-  const isMine = s.uid === me.uid;
-  const voted = votes.includes(me.uid);
-  const range = `${clock(s.start)}–${s.end ? clock(s.end) : "진행 중"}`;
+  const n = group.members.length, need = needVotes(n), d = today();
+  const votes = s.votes || [], isMine = s.uid === me.uid;
+  const range = `${rankMode === "week" ? md(s.date) + " " : ""}${clock(s.start)}–${isRunning(s) ? "진행 중" : clock(s.end || s.start)}`;
+  const status = s.voided ? '<span class="chip void">구라 판정</span>' : s.reportedBy ? `<span class="chip last">신고 ${votes.length}/${need}</span>` : "";
   let action = "";
-  if (!isMine && n >= 3 && !s.voided) {
-    if (voted) action = `<span class="chip pause">동의함</span>`;
+  if (!isMine && n >= 3 && !s.voided && (s.date === d || isRunning(s))) {
+    if (votes.includes(me.uid)) action = '<span class="chip soft">동의함</span>';
     else if (s.reportedBy) action = `<button class="btn sm" data-vote="${s.id}">구라 동의</button>`;
-    else action = `<button class="btn sm" data-vote="${s.id}" ${myReportsToday() >= DAILY_REPORTS ? "disabled" : ""}>구라친다</button>`;
+    else action = `<button class="btn sm" data-vote="${s.id}">구라친다</button>`;
   }
-  let excuse = "";
-  if (s.excuse) excuse = `<div class="excuse"><b>해명:</b> ${esc(s.excuse)}</div>`;
-  else if (isMine && s.reportedBy) excuse = `<div class="row" style="margin-top:6px"><input id="ex-${s.id}" maxlength="60" placeholder="해명 한 줄 (한 번만 가능)" style="flex:1;min-width:0;padding:6px 10px"><button class="btn sm" data-excuse="${s.id}">등록</button></div>`;
-  return `<div class="sess ${s.voided ? "voided" : ""}">
-    <div class="meta"><span class="mono">${range} · ${hm(liveSec(s))}</span>
-      <span>${s.voided ? '<span class="chip void">구라 판정</span>' : s.reportedBy ? `<span class="chip last">신고 ${votes.length}/${need}</span>` : ""} ${action}</span></div>
-    ${excuse}</div>`;
+  const parts = [`<div class="row between"><span class="mono">${range} · ${hm(sessLen(s))}</span><span>${status} ${action}</span></div>`];
+  if (s.excuse) parts.push(`<div class="sub"><b>해명:</b> ${esc(s.excuse)}</div>`);
+  else if (isMine && s.reportedBy) parts.push(`<div class="row"><input id="ex-${s.id}" maxlength="60" placeholder="해명 한 줄 (한 번만 가능)" style="flex:1;min-width:0;padding:6px 10px"><button class="btn sm" data-excuse="${s.id}">등록</button></div>`);
+  const ed = edits.find(e => e.sid === s.id);
+  if (ed) {
+    const ev = ed.votes || [];
+    let eAct = "";
+    if (!isMine && ed.status === "open") eAct = ev.includes(me.uid) ? '<span class="chip soft">동의함</span>' : `<button class="btn sm" data-editvote="${ed.id}">동의</button>`;
+    parts.push(`<div class="row between"><span class="sub">✏️ 수정 요청: 종료 <b>${clock(ed.oldEnd)} → ${clock(ed.newEnd)}</b> · 동의 ${ev.length}/${need}${ed.status === "approved" ? " · 승인됨" : ""}</span>${eAct}</div>`);
+  } else if (isMine && !isRunning(s) && !s.voided && !isLegacy(s) && s.date >= mondayOf(d)) {
+    if (editOpen.has(s.id)) parts.push(`<div class="row"><span class="sub">실제 종료</span><input type="time" id="ed-${s.id}" style="flex:1;min-width:0;padding:6px 10px"><button class="btn sm" data-editsend="${s.id}">요청</button></div>`);
+    else parts.push(`<div><button class="btn sm" data-editopen="${s.id}">수정 요청</button></div>`);
+  }
+  return `<div class="sess ${s.voided ? "voided" : ""}">${parts.join("")}</div>`;
 }
 
-function updateRankTimes() {
+function updateLive(now) {
   if (!group) return;
-  const t = totals(), max = Math.max(1, ...Object.values(t));
+  const t = rankTotals(now), max = Math.max(1, ...Object.values(t));
   for (const u in t) {
     const el = document.querySelector(`[data-time="${CSS.escape(u)}"]`); if (el) el.textContent = hms(t[u]);
     const b = document.querySelector(`[data-bar="${CSS.escape(u)}"]`); if (b) b.style.width = (t[u] / max * 100) + "%";
   }
+  document.querySelectorAll("[data-live]").forEach(el => {
+    const s = sessions.find(x => x.id === el.dataset.live);
+    if (s && isRunning(s)) el.textContent = `공부 중 ${hm((now - origStart(s)) / 1000)}째`;
+  });
 }
 
+$("rkDay").onclick = () => { rankMode = "day"; $("rkDay").setAttribute("aria-pressed", true); $("rkWeek").setAttribute("aria-pressed", false); renderRank(); };
+$("rkWeek").onclick = () => { rankMode = "week"; $("rkWeek").setAttribute("aria-pressed", true); $("rkDay").setAttribute("aria-pressed", false); renderRank(); };
+
 $("rank").addEventListener("click", async e => {
-  const row = e.target.closest("[data-row]");
+  const t = e.target;
+  const row = t.closest("[data-row]");
   if (row) { const u = row.dataset.row; openRows.has(u) ? openRows.delete(u) : openRows.add(u); renderRank(); return; }
-  const v = e.target.closest("[data-vote]");
+
+  const pk = t.closest("[data-poke]");
+  if (pk) return poke(pk.dataset.u, pk.dataset.poke);
+
+  const v = t.closest("[data-vote]");
   if (v) {
     const s = sessions.find(x => x.id === v.dataset.vote); if (!s) return;
     const n = group.members.length;
-    if (!s.reportedBy && myReportsToday() >= DAILY_REPORTS) return toast(`오늘 신고는 ${DAILY_REPORTS}번까지야.`);
+    const myReports = sessions.filter(x => x.reportedBy === me.uid && x.date === today()).length;
+    if (!s.reportedBy && myReports >= DAILY_REPORTS) return toast(`오늘 신고는 ${DAILY_REPORTS}번까지야.`);
     const votes = [...new Set([...(s.votes || []), me.uid])];
     const upd = { votes: arrayUnion(me.uid) };
     if (!s.reportedBy) upd.reportedBy = me.uid;
@@ -595,88 +766,416 @@ $("rank").addEventListener("click", async e => {
     v.disabled = true;
     try {
       await updateDoc(doc(col("sessions"), s.id), upd);
-      if (upd.voided) { toast(`${nameOf(s.uid)} 구라 판정. 시간 삭제됨`); sendMsg("구라 판정 🚨", [s.uid], null); }
-      else if (!s.reportedBy) sendMsg("구라", [s.uid], null);
-    } catch (e) { toast("실패: " + e.code); v.disabled = false; }
+      if (upd.voided) {
+        toast(`${nameOf(s.uid)} 구라 판정. 시간 삭제됨`);
+        sendMsg(`🚨 ${nameOf(s.uid)} 구라 판정 (${hm(sessLen(s))} 삭제)`, [], null, true);
+        notify("all", "🚨 구라 판정", `${nameOf(s.uid)}의 공부 기록이 삭제됐어`);
+      } else if (!s.reportedBy) {
+        sendMsg("구라", [s.uid], null);
+        notify([s.uid], "구라 신고", `${nameOf(me.uid)}가 네 공부 기록을 구라로 신고했어`);
+      }
+    } catch (err) { toast("실패: " + err.code); v.disabled = false; }
     return;
   }
-  const ex = e.target.closest("[data-excuse]");
+
+  const ex = t.closest("[data-excuse]");
   if (ex) {
-    const inp = $("ex-" + ex.dataset.excuse); const text = inp.value.trim();
+    const text = $("ex-" + ex.dataset.excuse).value.trim();
     if (!text) return toast("내용을 써줘.");
-    try { await updateDoc(doc(col("sessions"), ex.dataset.excuse), { excuse: text }); } catch (e) { toast("실패: " + e.code); }
+    try { await updateDoc(doc(col("sessions"), ex.dataset.excuse), { excuse: text }); } catch (err) { toast("실패: " + err.code); }
+    return;
+  }
+
+  const eo = t.closest("[data-editopen]");
+  if (eo) { editOpen.add(eo.dataset.editopen); renderRank(); return; }
+
+  const es = t.closest("[data-editsend]");
+  if (es) {
+    const s = sessions.find(x => x.id === es.dataset.editsend); if (!s) return;
+    const val = $("ed-" + s.id).value;
+    if (!/^\d{2}:\d{2}$/.test(val)) return toast("시간을 골라줘.");
+    let newEnd = Date.parse(`${dayOf(s.start)}T${val}:00+09:00`);
+    if (newEnd <= s.start) newEnd += 864e5;
+    if (newEnd <= s.start || newEnd > Math.min(Date.now(), capOf(s))) return toast("시작 이후, 지금 이전, 최대 18시간 안으로만 가능해.");
+    const n = group.members.length;
+    try {
+      await addDoc(col("edits"), { sid: s.id, uid: me.uid, date: s.date, oldEnd: s.end, newEnd, votes: [], status: n === 1 ? "approved" : "open", ts: Date.now() });
+      editOpen.delete(s.id);
+      if (n > 1) {
+        sendMsg(`✏️ ${nameOf(me.uid)} 기록 수정 요청: ${md(s.date)} 종료 ${clock(s.end)} → ${clock(newEnd)}`, [], null, true);
+        notify("all", "✏️ 기록 수정 요청", `${nameOf(me.uid)}: 종료 ${clock(s.end)} → ${clock(newEnd)}`);
+      }
+      toast("수정 요청 보냄");
+    } catch (err) { toast("실패: " + err.code); }
+    return;
+  }
+
+  const ev = t.closest("[data-editvote]");
+  if (ev) {
+    const ed = edits.find(x => x.id === ev.dataset.editvote); if (!ed) return;
+    const n = group.members.length;
+    const votes = [...new Set([...(ed.votes || []), me.uid])];
+    ev.disabled = true;
+    try { await updateDoc(doc(col("edits"), ed.id), { votes: arrayUnion(me.uid), status: votes.length * 2 > n - 1 ? "approved" : "open" }); }
+    catch (err) { toast("실패: " + err.code); ev.disabled = false; }
   }
 });
+
+async function applyEdit(ed) {
+  applying.add(ed.id);
+  try {
+    const sref = doc(col("sessions"), ed.sid);
+    const s = (await getDoc(sref)).data();
+    if (s && !s.voided) {
+      await updateDoc(sref, { end: ed.newEnd, seconds: Math.round((ed.newEnd - s.start) / 1000) });
+      sendMsg(`✏️ ${nameOf(me.uid)} 기록 수정 반영: ${md(ed.date)} 종료 ${clock(ed.newEnd)}`, [], null, true);
+    }
+    await updateDoc(doc(col("edits"), ed.id), { status: "applied" });
+  } catch (e) { applying.delete(ed.id); console.warn("applyEdit", e); }
+}
+
+/* ---------- 응원 / 공부해 ---------- */
+async function poke(u, type) {
+  const now = Date.now();
+  if (type === "nudge") {
+    const k = `sb_nudge_${gid}_${me.uid}_${u}`, last = Number(lsGet(k) || 0);
+    if (now - last < NUDGE_COOLDOWN) return toast(`공부해는 한 사람한테 1시간에 한 번만 (${Math.ceil((NUDGE_COOLDOWN - (now - last)) / 60000)}분 남음)`);
+    lsSet(k, String(now));
+  } else if (!coolOk("cheer:" + u)) return;
+  try {
+    await addDoc(col("pokes"), { from: me.uid, to: u, type, ts: now });
+    if (type === "cheer") notify([u], "👏 응원 도착", `${nameOf(me.uid)}가 응원했어`);
+    else notify([u], "📚 공부해!", `${nameOf(me.uid)}: 공부해라`);
+    toast(type === "cheer" ? "응원 보냄" : "공부해 보냄");
+  } catch (e) { toast("실패: " + e.code); }
+}
+
+/* ---------- 23시 점검 / 개인 최고 ---------- */
+async function maybeNightly(now) {
+  if (kstHour(now) !== 23 || nightlyTried === today()) return;
+  nightlyTried = today();
+  const d = today(), st = S();
+  if (st.restDays.includes(weekday(d)) || group.lastNightly === d) return;
+  try {
+    const ok = await runTransaction(db, async tx => {
+      const g = (await tx.get(gref())).data();
+      if (g.lastNightly === d) return false;
+      tx.update(gref(), { lastNightly: d });
+      return true;
+    });
+    if (!ok) return;
+    const t = dayTotals(d, sessions, now), ex = group.exempt || {};
+    const cands = Object.keys(t).filter(u => !(ex[u] || []).includes(d));
+    if (!cands.length) return;
+    const minV = Math.min(...cands.map(u => t[u]));
+    const losers = cands.length >= 2 ? cands.filter(u => t[u] === minV) : [];
+    const under = st.minHours > 0 ? cands.filter(u => t[u] < st.minHours * 3600) : [];
+    let text = "🌙 23시 점검 · " + (losers.length ? `꼴찌 위기: ${losers.map(u => `${nameOf(u)}(${hm(t[u])})`).join(", ")}` : "꼴찌 위기 없음");
+    if (under.length) text += ` · 기준 미달: ${under.map(nameOf).join(", ")}`;
+    await sendMsg(text, [], null, true);
+    notify("all", "🌙 23시 점검", text.replace("🌙 23시 점검 · ", ""), true);
+  } catch (e) { console.warn("nightly", e); }
+}
+function maybeBest(now) {
+  const d = today(), key = `sb_best_${gid}_${me.uid}_${d}`;
+  if (lsGet(key)) return;
+  const prev = group.best?.[me.uid] || 0;
+  if (prev < 1800) return;
+  const mine = dayTotals(d, sessions, now)[me.uid] || 0;
+  if (mine > prev) { lsSet(key, "1"); sendMsg(`🏆 ${nameOf(me.uid)} 개인 최고 기록 경신! (${hm(mine)} 돌파)`, [], null, true); }
+}
 
 /* ---------- 정산 ---------- */
 async function settle() {
   if (settling || !group) return; settling = true;
   try {
     const y = addDays(today(), -1);
-    let guard = 0;
-    while (group.lastSettled && group.lastSettled < y && guard++ < 14) {
+    let guard = 0, stop = false;
+    // 일일
+    while (!stop && group.lastSettled && group.lastSettled < y && guard++ < 21) {
       const d = addDays(group.lastSettled, 1);
-      const snap = await getDocs(query(col("sessions"), where("date", "==", d)));
-      const tot = {};
-      for (const u of group.members) if ((group.joined?.[u] || "0") <= d) tot[u] = 0;
-      snap.forEach(x => {
-        const s = x.data(); if (s.voided || !(s.uid in tot)) return;
-        tot[s.uid] += s.state === "done" ? (s.seconds || 0) : liveSec({ ...s }, Math.min(midnightOf(addDays(d, 1)), s.lastBeat || s.lastResume));
-      });
-      const ids = Object.keys(tot);
-      const minV = Math.min(...Object.values(tot));
-      const losers = ids.length >= 2 ? ids.filter(u => tot[u] === minV) : [];
+      const snap = await getDocs(query(col("sessions"), where("date", ">=", addDays(d, -1)), where("date", "<=", d)));
+      const list = snap.docs.map(x => ({ id: x.id, ...x.data() }));
       const ok = await runTransaction(db, async tx => {
         const g = (await tx.get(gref())).data();
-        if (g.lastSettled !== addDays(d, -1)) return false;   // 다른 사람이 이미 정산함
-        const fines = { ...(g.fines || {}) };
-        losers.forEach(u => fines[u] = (fines[u] || 0) + FINE);
-        const log = [{ date: d, losers, totals: Object.fromEntries(ids.map(u => [u, Math.round(tot[u])])) }, ...(g.log || [])].slice(0, 30);
-        tx.update(gref(), { fines, log, lastSettled: d });
+        if (g.lastSettled !== addDays(d, -1)) return false;
+        const st = { ...DEF, ...(g.settings || {}) };
+        const upd = { lastSettled: d };
+        if (st.restDays.includes(weekday(d))) {
+          upd.log = [{ date: d, rest: true }, ...(g.log || [])].slice(0, 40);
+        } else {
+          const end = midnightOf(addDays(d, 1));
+          const tot = dayTotals(d, list, end, g);
+          const ex = g.exempt || {};
+          const exempt = Object.keys(tot).filter(u => (ex[u] || []).includes(d));
+          const cands = Object.keys(tot).filter(u => !exempt.includes(u));
+          const minSec = st.minHours * 3600;
+          const minV = cands.length ? Math.min(...cands.map(u => tot[u])) : 0;
+          const losers = cands.length >= 2 ? cands.filter(u => tot[u] === minV) : [];
+          const under = st.minHours > 0 ? cands.filter(u => tot[u] < minSec) : [];
+          const charged = {};
+          for (const u of new Set([...losers, ...under])) charged[u] = FINE;
+          const fines = { ...(g.fines || {}) }, streak = { ...(g.streak || {}) }, best = { ...(g.best || {}) }, stats = JSON.parse(JSON.stringify(g.stats || {}));
+          for (const u in charged) fines[u] = (fines[u] || 0) + FINE;
+          for (const u of cands) streak[u] = st.minHours > 0 ? (tot[u] >= minSec ? (streak[u] || 0) + 1 : 0) : (tot[u] > 0 ? (streak[u] || 0) + 1 : 0);
+          for (const u in tot) if (tot[u] > (best[u] || 0)) best[u] = Math.round(tot[u]);
+          for (const u in tot) {
+            const mineD = list.filter(s => s.uid === u && s.date === d);
+            const early = mineD.some(s => !isLegacy(s) && s.start === origStart(s) && kstHour(s.start) >= 4 && kstHour(s.start) < 7) || mineD.some(s => isLegacy(s) && kstHour(s.start) >= 4 && kstHour(s.start) < 7);
+            const voided = mineD.filter(s => s.voided).length;
+            if (early || voided) { stats[u] = stats[u] || {}; if (early) stats[u].early = (stats[u].early || 0) + 1; if (voided) stats[u].voided = (stats[u].voided || 0) + voided; }
+          }
+          Object.assign(upd, { fines, streak, best, stats });
+          upd.log = [{ date: d, losers, under, exempt, charged, totals: Object.fromEntries(Object.keys(tot).map(u => [u, Math.round(tot[u])])) }, ...(g.log || [])].slice(0, 40);
+        }
+        tx.update(gref(), upd);
         return true;
       });
-      if (!ok) { guard = 99; break; }
+      if (!ok) stop = true;
       group = (await getDoc(gref())).data();
     }
-    if (guard >= 14 && guard < 99 && group.lastSettled < y) await updateDoc(gref(), { lastSettled: y }); // 너무 오래 비었으면 건너뜀
+    if (!stop && guard >= 21 && group.lastSettled < y) await updateDoc(gref(), { lastSettled: y });
+
+    // 주간 (월~일, 일요일 일일 정산 끝난 뒤)
+    guard = 0; stop = false;
+    while (!stop && group.lastWeekSettled && guard++ < 8) {
+      const W = addDays(group.lastWeekSettled, 7), Wend = addDays(W, 6);
+      if (Wend > y || group.lastSettled < Wend) break;
+      const snap = await getDocs(query(col("sessions"), where("date", ">=", addDays(W, -1)), where("date", "<=", Wend)));
+      const list = snap.docs.map(x => ({ id: x.id, ...x.data() }));
+      const ok = await runTransaction(db, async tx => {
+        const g = (await tx.get(gref())).data();
+        if (g.lastWeekSettled !== addDays(W, -7)) return false;
+        const st = { ...DEF, ...(g.settings || {}) };
+        const tot = {};
+        for (const u of eligibleOn(g, Wend)) tot[u] = 0;
+        for (let d = W; d <= Wend; d = addDays(d, 1)) {
+          const dt = dayTotals(d, list, midnightOf(addDays(d, 1)), g);
+          for (const u in dt) if (u in tot) tot[u] += dt[u];
+        }
+        const ids = Object.keys(tot);
+        const teamTotal = ids.reduce((a, u) => a + tot[u], 0);
+        const achieved = st.teamWeekHours > 0 && teamTotal >= st.teamWeekHours * 3600;
+        const dailyCharged = {};
+        for (const l of (g.log || [])) if (l.date >= W && l.date <= Wend) for (const [u, v] of Object.entries(chargedOf(l))) dailyCharged[u] = (dailyCharged[u] || 0) + v;
+        const fines = { ...(g.fines || {}) };
+        let losers = [], refund = {};
+        if (achieved) {
+          refund = dailyCharged;
+          for (const u in refund) fines[u] = Math.max(0, (fines[u] || 0) - refund[u]);
+        } else if (ids.length >= 2) {
+          const minV = Math.min(...ids.map(u => tot[u]));
+          losers = ids.filter(u => tot[u] === minV);
+          for (const u of losers) fines[u] = (fines[u] || 0) + WEEK_FINE;
+        }
+        const weekCharged = {};
+        if (!achieved) { Object.assign(weekCharged, dailyCharged); for (const u of losers) weekCharged[u] = (weekCharged[u] || 0) + WEEK_FINE; }
+        const top = ids.length ? ids.reduce((a, b) => tot[b] > tot[a] ? b : a) : null;
+        const entry = { week: W, totals: Object.fromEntries(ids.map(u => [u, Math.round(tot[u])])), losers, teamTotal: Math.round(teamTotal), goalHours: st.teamWeekHours, achieved, refund, weekCharged, top };
+        tx.update(gref(), { fines, lastWeekSettled: W, weekLog: [entry, ...(g.weekLog || [])].slice(0, 20) });
+        return true;
+      });
+      if (!ok) stop = true;
+      group = (await getDoc(gref())).data();
+    }
   } catch (e) { console.warn("settle", e); }
   finally { settling = false; }
 }
 
-/* ---------- 헤더 / 돈 / 설정 ---------- */
+/* ---------- 헤더 / 목표 / 리포트 ---------- */
+const potOf = () => Object.values(group?.fines || {}).reduce((a, b) => a + b, 0);
 function renderHeader() {
   if (!group) return;
   const days = Math.round((Date.parse((group.dday || DEFAULT_DDAY) + "T00:00:00Z") - Date.parse(today() + "T00:00:00Z")) / 864e5);
   $("hDday").textContent = days > 0 ? `D-${days}` : days === 0 ? "D-DAY" : `D+${-days}`;
-  const pot = Object.values(group.fines || {}).reduce((a, b) => a + b, 0);
+  const pot = potOf(), st = S();
   $("hPot").textContent = won(pot);
+  const on = st.goalAmount > 0;
+  $("hGoal").hidden = !on;
+  if (on) {
+    const pct = Math.min(100, Math.round(pot / st.goalAmount * 100));
+    $("hGoalBar").style.width = pct + "%";
+    $("hGoalTxt").textContent = `${st.goalName || "목표"} ${pct}%`;
+  }
 }
+function renderTeam() {
+  if (!group) return;
+  const st = S();
+  $("teamCard").hidden = !(st.teamWeekHours > 0);
+  if (!(st.teamWeekHours > 0)) return;
+  const t = weekTotals(), total = Object.values(t).reduce((a, b) => a + b, 0), goal = st.teamWeekHours * 3600;
+  $("teamTxt").textContent = `${hm(total)} / ${st.teamWeekHours}시간`;
+  $("teamBar").style.width = Math.min(100, total / goal * 100) + "%";
+}
+function renderReport() {
+  const w = group?.weekLog?.[0], el = $("report");
+  if (!w || lsGet(`sb_rep_${gid}`) === w.week || today() > addDays(w.week, 13)) { el.hidden = true; return; }
+  const ids = Object.keys(w.totals || {});
+  const wc = w.weekCharged || {}, fineTop = Object.keys(wc).sort((a, b) => wc[b] - wc[a])[0];
+  const lines = [];
+  if (w.top) lines.push(`🥇 1등 <b>${esc(nameOf(w.top))}</b> ${hm(w.totals[w.top])}`);
+  if (w.achieved) lines.push(`🎉 그룹 목표 ${w.goalHours}시간 달성 · 이번 주 벌금 전부 면제`);
+  else if (w.losers?.length) lines.push(`🐢 주간 꼴찌 <b>${w.losers.map(u => esc(nameOf(u))).join(", ")}</b> +${won(WEEK_FINE)}`);
+  lines.push(`👥 그룹 합계 ${hm(w.teamTotal || 0)}${w.goalHours ? ` / 목표 ${w.goalHours}시간` : ""}`);
+  if (fineTop && wc[fineTop] > 0) lines.push(`💸 이번 주 벌금 1위 <b>${esc(nameOf(fineTop))}</b> ${won(wc[fineTop])}`);
+  lines.push(`<span class="hint">${ids.sort((a, b) => w.totals[b] - w.totals[a]).map(u => `${esc(nameOf(u))} ${hm(w.totals[u])}`).join(" · ")}</span>`);
+  el.hidden = false;
+  el.innerHTML = `<div class="row between"><h2>주간 리포트 · ${md(w.week)}~${md(addDays(w.week, 6))}</h2><button class="btn sm" id="repClose">닫기</button></div><div class="stack" style="gap:4px">${lines.map(l => `<div>${l}</div>`).join("")}</div>`;
+  $("repClose").onclick = () => { lsSet(`sb_rep_${gid}`, w.week); renderReport(); };
+}
+
+/* ---------- 돈 ---------- */
 function renderMoney() {
-  const f = group.fines || {};
-  const pot = Object.values(f).reduce((a, b) => a + b, 0);
+  if (!group) return;
+  const f = group.fines || {}, pot = potOf(), st = S();
   $("potBig").textContent = won(pot);
+  $("potGoal").hidden = !(st.goalAmount > 0);
+  if (st.goalAmount > 0) {
+    const pct = Math.min(100, Math.round(pot / st.goalAmount * 100));
+    $("potGoalBar").style.width = pct + "%";
+    $("potGoalTxt").textContent = `${st.goalName || "목표"}까지 ${won(Math.max(0, st.goalAmount - pot))} 남음 (${pct}%)`;
+  }
   $("fines").innerHTML = group.members.map(u => [u, f[u] || 0]).sort((a, b) => b[1] - a[1])
-    .map(([u, v]) => `<li><span>${esc(nameOf(u))}</span><span class="mono">${won(v)}</span></li>`).join("");
+    .map(([u, v]) => `<li><span>${esc(nameOf(u))}${titlesOf(u).map(t => `<span class="chip title">${esc(t)}</span>`).join("")}</span><span class="mono">${won(v)}</span></li>`).join("");
+  const wl = group.weekLog || [];
+  $("weekLog").innerHTML = wl.length ? wl.map(w => `<div><b class="mono">${md(w.week)}주</b> · ${w.achieved ? "그룹 목표 달성, 벌금 면제" : w.losers?.length ? w.losers.map(u => esc(nameOf(u))).join(", ") + " +" + won(WEEK_FINE) : "적립 없음"} · 합계 ${hm(w.teamTotal || 0)}</div>`).join("") : "아직 주간 정산 없음. 매주 월요일에 지난주를 정산해.";
   const log = group.log || [];
-  $("log").innerHTML = log.length ? log.map(l => `<div><b class="mono">${l.date.slice(5)}</b> · ${l.losers.length ? l.losers.map(u => `${esc(nameOf(u))} (${hm(l.totals?.[u] || 0)})`).join(", ") + " +" + won(FINE) : "적립 없음"}</div>`).join("") : "아직 정산 기록 없음. 첫 정산은 내일 자정 이후.";
+  $("log").innerHTML = log.length ? log.map(l => {
+    if (l.rest) return `<div><b class="mono">${md(l.date)}</b> · 휴식일</div>`;
+    const ch = chargedOf(l), names = Object.keys(ch);
+    const why = u => [(l.losers || []).includes(u) ? "꼴찌" : "", (l.under || []).includes(u) ? "미달" : ""].filter(Boolean).join("·");
+    return `<div><b class="mono">${md(l.date)}</b> · ${names.length ? names.map(u => `${esc(nameOf(u))}(${why(u) || "꼴찌"}, ${hm(l.totals?.[u] || 0)})`).join(", ") + ` +${won(FINE)}` : "적립 없음"}${l.exempt?.length ? ` · 면제 ${l.exempt.map(u => esc(nameOf(u))).join(", ")}` : ""}</div>`;
+  }).join("") : "아직 정산 기록 없음. 첫 정산은 내일 자정 이후.";
 }
+
+/* ---------- 설정 ---------- */
 function renderSettings() {
+  if (!group) return;
+  const st = S(), own = isOwner();
   if (document.activeElement !== $("inDday")) $("inDday").value = group.dday || DEFAULT_DDAY;
-  $("gCode").textContent = gid;
+  if (document.activeElement !== $("inNick")) $("inNick").value = nameOf(me.uid);
   $("meName").textContent = me.username;
-  $("gMembers").textContent = "멤버 " + group.members.length + "명: " + group.members.map(nameOf).join(", ");
+  $("gCode").textContent = gid;
+  $("rulesOwner").textContent = own ? "방장만 바꿀 수 있어 (너가 방장)" : `방장 ${nameOf(group.owner)}만 바꿀 수 있어`;
+  if (!rulesDirty) {
+    $("inMin").value = st.minHours; $("inGoalName").value = st.goalName; $("inGoalAmt").value = st.goalAmount; $("inTeam").value = st.teamWeekHours;
+    $("restDays").innerHTML = WD.map((w, i) => `<label><input type="checkbox" value="${i}" ${st.restDays.includes(i) ? "checked" : ""} ${own ? "" : "disabled"}>${w}</label>`).join("");
+  }
+  for (const id of ["inMin", "inGoalName", "inGoalAmt", "inTeam", "rulesSave"]) $(id).disabled = !own;
+  $("backupCard").hidden = !own;
+  renderMembers();
+  renderPushState();
 }
+function renderMembers() {
+  if (!group) return;
+  const own = isOwner();
+  $("members").innerHTML = group.members.map(u => {
+    const tags = `${u === group.owner ? '<span class="chip title">방장</span>' : ""}${u === me.uid ? '<span class="chip soft">나</span>' : ""}`;
+    let acts = "";
+    if (own && u !== me.uid) acts = `<span class="row"><button class="btn sm" data-owner="${esc(u)}">${confirmKey === "own:" + u ? "한 번 더" : "방장 넘기기"}</button><button class="btn sm" data-kick="${esc(u)}">${confirmKey === "kick:" + u ? "한 번 더" : "강퇴"}</button></span>`;
+    return `<li><span>${esc(nameOf(u))}${tags}</span>${acts}</li>`;
+  }).join("");
+}
+$("rulesCard").addEventListener("input", () => { rulesDirty = true; });
+$("rulesSave").onclick = async () => {
+  const minHours = Number($("inMin").value);
+  if (!(minHours >= 0 && minHours <= 12)) return toast("최소 기준은 0~12시간");
+  const restDays = [...document.querySelectorAll("#restDays input:checked")].map(i => Number(i.value));
+  const settings = { minHours, restDays, goalName: $("inGoalName").value.trim().slice(0, 20), goalAmount: Math.max(0, Math.floor(Number($("inGoalAmt").value) || 0)), teamWeekHours: Math.max(0, Math.floor(Number($("inTeam").value) || 0)) };
+  try { await updateDoc(gref(), { settings }); rulesDirty = false; toast("규칙 저장됨"); sendMsg(`⚙️ 방장이 규칙 변경: 최소 ${minHours}시간 · 휴식일 ${restDays.map(i => WD[i]).join("") || "없음"}${settings.teamWeekHours ? ` · 주간 목표 ${settings.teamWeekHours}시간` : ""}`, [], null, true); }
+  catch (e) { toast("실패: " + e.code); }
+};
+$("members").addEventListener("click", async e => {
+  const o = e.target.closest("[data-owner]"), k = e.target.closest("[data-kick]");
+  if (o) {
+    const u = o.dataset.owner;
+    if (!armConfirm("own:" + u)) { renderMembers(); return; }
+    try { await updateDoc(gref(), { owner: u }); sendMsg(`👑 방장이 ${nameOf(u)}로 바뀜`, [], null, true); } catch (err) { toast("실패: " + err.code); }
+  }
+  if (k) {
+    const u = k.dataset.kick;
+    if (!armConfirm("kick:" + u)) { renderMembers(); return; }
+    try { await updateDoc(gref(), { members: arrayRemove(u) }); sendMsg(`🚪 ${nameOf(u)} 강퇴됨`, [], null, true); } catch (err) { toast("실패: " + err.code); }
+  }
+});
+$("nickSave").onclick = async () => {
+  const v = $("inNick").value.trim();
+  if (!v || v.length > 10) return toast("닉네임은 1~10자");
+  if (v === nameOf(me.uid)) return;
+  if ((group.nickChanged || {})[me.uid] === today()) return toast("닉네임은 하루 1번만 바꿀 수 있어");
+  if (group.members.some(u => u !== me.uid && nameOf(u).toLowerCase() === v.toLowerCase())) return toast("그룹에 같은 닉네임이 있어");
+  const old = nameOf(me.uid);
+  try { await updateDoc(gref(), { [`names.${me.uid}`]: v, [`nickChanged.${me.uid}`]: today() }); toast("닉네임 변경됨"); sendMsg(`🏷️ ${old} → ${v} 닉네임 변경`, [], null, true); }
+  catch (e) { toast("실패: " + e.code); }
+};
 $("ddaySave").onclick = async () => {
   const v = $("inDday").value; if (!v) return;
   try { await updateDoc(gref(), { dday: v }); toast("수능 날짜 저장됨"); } catch (e) { toast("실패: " + e.code); }
 };
 $("copyCode").onclick = async () => { try { await navigator.clipboard.writeText(gid); toast("코드 복사됨"); } catch { toast("복사 실패. 코드: " + gid); } };
+$("backupBtn").onclick = async () => {
+  $("backupBtn").disabled = true;
+  try {
+    const [ss, cs, es] = await Promise.all([getDocs(col("sessions")), getDocs(col("chat")), getDocs(col("edits"))]);
+    const data = { exportedAt: new Date().toISOString(), group: gid, groupData: group, sessions: ss.docs.map(d => ({ id: d.id, ...d.data() })), chat: cs.docs.map(d => ({ id: d.id, ...d.data() })), edits: es.docs.map(d => ({ id: d.id, ...d.data() })) };
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+    a.download = `study-bet-${gid}-${today()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast("백업 파일 내려받음");
+  } catch (e) { toast("백업 실패: " + (e.code || e.message)); }
+  finally { $("backupBtn").disabled = false; }
+};
+
+/* ---------- 알림 ---------- */
+let messaging = null;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const standalone = () => window.navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+function renderPushState() {
+  const s = $("pushState"), b = $("pushBtn");
+  if (!vapidKey || !workerUrl) { s.textContent = "알림 서버 설정이 아직 안 끝났어. 설정이 끝나면 여기서 켤 수 있어."; b.disabled = true; return; }
+  if (isIOS && !standalone()) { s.textContent = "아이폰은 Safari 공유 버튼 → '홈 화면에 추가' 한 다음, 홈 화면 아이콘으로 열어야 알림을 켤 수 있어."; b.disabled = true; return; }
+  if (!("Notification" in window) || !("serviceWorker" in navigator)) { s.textContent = "이 브라우저는 알림을 지원하지 않아."; b.disabled = true; return; }
+  b.disabled = false;
+  if (Notification.permission === "granted" && lsGet(`sb_push_${me?.uid}`)) { s.textContent = "알림 켜짐 ✓ (공부해, 응원, 멘션, 구라 신고, 23시 점검)"; b.textContent = "알림 다시 연결"; }
+  else if (Notification.permission === "denied") { s.textContent = "알림이 차단돼 있어. 브라우저 사이트 설정에서 허용으로 바꿔줘."; b.textContent = "알림 켜기"; }
+  else { s.textContent = "공부해, 응원, 멘션, 구라 신고, 23시 점검을 폰 알림으로 받아."; b.textContent = "알림 켜기"; }
+}
+async function initPush(ask) {
+  try {
+    if (!vapidKey || !workerUrl || !("Notification" in window) || !("serviceWorker" in navigator)) return renderPushState();
+    if (!ask && Notification.permission !== "granted") return renderPushState();
+    if (ask) { const p = await Notification.requestPermission(); if (p !== "granted") { renderPushState(); return toast("알림이 허용되지 않았어"); } }
+    const { getMessaging, getToken, onMessage, isSupported } = await import(V + "firebase-messaging.js");
+    if (!(await isSupported())) { if (ask) toast("이 브라우저는 알림을 지원하지 않아"); return; }
+    const reg = await navigator.serviceWorker.register("./firebase-messaging-sw.js");
+    if (!messaging) {
+      messaging = getMessaging(app);
+      onMessage(messaging, p => toast(`${p.notification?.title || "알림"} · ${p.notification?.body || ""}`));
+    }
+    const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: reg });
+    if (token && gid) {
+      await setDoc(doc(db, "groups", gid, "tokens", me.uid), { tokens: arrayUnion(token), updatedAt: Date.now() }, { merge: true });
+      lsSet(`sb_push_${me.uid}`, token);
+      if (ask) toast("알림 켜짐");
+    }
+  } catch (e) { if (ask) toast("알림 켜기 실패: " + (e.code || e.message)); console.warn("push", e); }
+  renderPushState();
+}
+$("pushBtn").onclick = () => initPush(true);
+async function notify(to, title, body, includeSelf = false) {
+  if (!workerUrl || !auth.currentUser || !gid) return;
+  try {
+    const t = await auth.currentUser.getIdToken();
+    fetch(workerUrl, { method: "POST", headers: { authorization: "Bearer " + t, "content-type": "application/json" }, body: JSON.stringify({ group: gid, to, title, body, includeSelf }) }).catch(() => {});
+  } catch {}
+}
 
 /* ---------- 채팅 ---------- */
 const QUESTIONS = ["밥 언제?", "몇 시에 끝남?", "공부 중?"];
 const ANSWERS = ["ㄱㄱ", "ㄴㄴ", "ㅇㅇ", "구라", "공부해라"];
 const NEED_HOUR = new Set(["밥 언제?", "몇 시에 끝남?"]);
-
 $("padQ").innerHTML = QUESTIONS.map(q => `<button data-q="${esc(q)}">${esc(q)}</button>`).join("");
 $("padA").innerHTML = ANSWERS.map(a => `<button data-a="${esc(a)}">${esc(a)}</button>`).join("");
 $("hours").innerHTML = Array.from({ length: 24 }, (_, i) => `<button data-h="${i + 1}">${i + 1}</button>`).join("");
@@ -692,16 +1191,18 @@ $("mentionPad").addEventListener("click", e => {
   const k = b.dataset.m; mentionSel.has(k) ? mentionSel.delete(k) : mentionSel.add(k);
   renderMentionPad();
 });
-
 function coolOk(key) {
   const now = Date.now();
   if (now - (cooldown[key] || 0) < 3000) { toast("같은 버튼은 3초에 한 번만."); return false; }
   cooldown[key] = now; return true;
 }
-async function sendMsg(text, mentions, key) {
+async function sendMsg(text, mentions, key, sys = false) {
   if (key && !coolOk(key)) return;
   try {
-    await addDoc(col("chat"), { uid: me.uid, text, mentions: mentions || [], ts: Date.now() });
+    const m = { uid: me.uid, text, mentions: mentions || [], ts: Date.now() };
+    if (sys) m.sys = true;
+    await addDoc(col("chat"), m);
+    if (!sys && mentions?.length) notify(mentions.includes("all") ? "all" : mentions, nameOf(me.uid), `${mentions.includes("all") ? "@전체 " : ""}${text}`);
     if (chat.length >= 100) {
       const all = await getDocs(query(col("chat"), orderBy("ts", "desc"), limit(140)));
       all.docs.slice(100).forEach(d => deleteDoc(d.ref).catch(() => {}));
@@ -713,7 +1214,6 @@ function sendWithMentions(text, key) {
   mentionSel.clear(); renderMentionPad();
   sendMsg(text, m, key);
 }
-
 $("padA").addEventListener("click", e => { const b = e.target.closest("[data-a]"); if (b) sendWithMentions(b.dataset.a, "a:" + b.dataset.a); });
 $("padQ").addEventListener("click", e => {
   const b = e.target.closest("[data-q]"); if (!b) return;
@@ -724,14 +1224,14 @@ $("padQ").addEventListener("click", e => {
 $("hours").addEventListener("click", e => {
   const b = e.target.closest("[data-h]"); if (!b || !pendingQ) return;
   const q = pendingQ; pendingQ = null; $("hourBox").hidden = true;
-  const text = q === "밥 언제?" ? `밥 ${b.dataset.h}시?` : `${b.dataset.h}시에 끝남?`;
-  sendWithMentions(text, "q:" + q);
+  sendWithMentions(q === "밥 언제?" ? `밥 ${b.dataset.h}시?` : `${b.dataset.h}시에 끝남?`, "q:" + q);
 });
 $("hourNone").onclick = () => { if (!pendingQ) return; const q = pendingQ; pendingQ = null; $("hourBox").hidden = true; sendWithMentions(q, "q:" + q); };
 
 const readKey = () => `sb_read_${gid}_${me?.uid}`;
 function markRead() { const last = chat[chat.length - 1]; if (last) lsSet(readKey(), String(last.ts)); updateDot(); }
 function updateDot() {
+  if (!me) return;
   const read = Number(lsGet(readKey()) || 0);
   const fresh = chat.filter(m => m.ts > read && m.uid !== me.uid);
   const tags = fresh.filter(m => (m.mentions || []).includes(me.uid) || (m.mentions || []).includes("all")).length;
@@ -743,6 +1243,7 @@ function renderChat() {
   const l = $("chatlog");
   const atBottom = l.scrollHeight - l.scrollTop - l.clientHeight < 40;
   l.innerHTML = chat.length ? chat.map(m => {
+    if (m.sys) return `<div class="msg sys"><small>${clock(m.ts)}</small>${esc(m.text)}</div>`;
     const mine = m.uid === me.uid;
     const tagme = !mine && ((m.mentions || []).includes(me.uid) || (m.mentions || []).includes("all"));
     const at = (m.mentions || []).map(u => u === "all" ? "@전체" : "@" + nameOf(u)).join(" ");
